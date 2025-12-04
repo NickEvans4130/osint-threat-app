@@ -87,6 +87,7 @@ fun HomeScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScannerCard(
     title: String,
