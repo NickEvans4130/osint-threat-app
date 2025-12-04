@@ -53,9 +53,11 @@ class UrlHausParser : FeedParser {
         val records = mutableListOf<ThreatRecord>()
         content.lines().forEach { line ->
             if (line.isNotBlank() && !line.startsWith("#") && !line.startsWith("id,")) {
-                val parts = line.split(",")
-                if (parts.size >= 2) {
-                    val url = parts[1].trim().removeSurrounding("\"")
+                // URLhaus CSV format: id,dateadded,url,url_status,last_online,threat,...
+                // Split by comma but handle quoted fields
+                val parts = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex())
+                if (parts.size >= 3) {
+                    val url = parts[2].trim().removeSurrounding("\"")
                     if (url.isNotBlank() && (url.startsWith("http://") || url.startsWith("https://"))) {
                         records.add(ThreatRecord(url, source, timestamp))
                     }

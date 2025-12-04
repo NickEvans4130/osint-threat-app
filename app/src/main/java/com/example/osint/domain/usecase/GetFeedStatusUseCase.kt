@@ -31,11 +31,11 @@ class GetFeedStatusUseCase(
                 lastUpdateTime = repository.getUrlLastUpdateTime("openphish")
             ),
             FeedInfo(
-                name = "AbuseIPDB",
-                source = "abuseipdb",
+                name = "Blocklist.de",
+                source = "blocklist",
                 type = FeedType.IP,
-                recordCount = repository.getIpCountBySource("abuseipdb"),
-                lastUpdateTime = repository.getIpLastUpdateTime("abuseipdb")
+                recordCount = repository.getIpCountBySource("blocklist"),
+                lastUpdateTime = repository.getIpLastUpdateTime("blocklist")
             ),
             FeedInfo(
                 name = "FireHOL",

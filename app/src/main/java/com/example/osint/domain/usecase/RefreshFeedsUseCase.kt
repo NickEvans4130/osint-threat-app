@@ -34,7 +34,7 @@ class RefreshFeedsUseCase(
                 "urlhaus",
                 "phishtank",
                 "openphish",
-                "abuseipdb",
+                "blocklist",
                 "firehol"
             )
 

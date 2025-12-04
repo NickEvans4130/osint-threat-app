@@ -9,7 +9,7 @@ class ParseFeedUseCase {
             "urlhaus" -> UrlHausParser()
             "phishtank" -> PhishTankParser()
             "openphish" -> OpenPhishParser()
-            "abuseipdb" -> AbuseIpDbParser()
+            "blocklist" -> BlocklistParser()
             "firehol" -> FireHolParser()
             else -> throw IllegalArgumentException("Unknown feed source: $feedSource")
         }
