@@ -8,9 +8,19 @@ class FireHolParser : FeedParser {
         val timestamp = System.currentTimeMillis()
 
         content.lines().forEach { line ->
-            val ip = line.trim()
-            if (ip.isNotBlank() && !ip.startsWith("#") && isValidIp(ip)) {
-                records.add(ThreatRecord(ip, source, timestamp))
+            val trimmed = line.trim()
+            if (trimmed.isNotBlank() && !trimmed.startsWith("#")) {
+                // FireHOL uses CIDR notation (e.g., 192.168.1.0/24)
+                // Extract the IP part before the slash
+                val ip = if (trimmed.contains("/")) {
+                    trimmed.substringBefore("/")
+                } else {
+                    trimmed
+                }
+
+                if (isValidIp(ip)) {
+                    records.add(ThreatRecord(ip, source, timestamp))
+                }
             }
         }
 
