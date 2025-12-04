@@ -1,41 +1,113 @@
 package com.example.osint.utils
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.LinkProperties
 import android.net.wifi.WifiManager
 import com.example.osint.domain.model.SubnetInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.net.Inet4Address
 import java.net.InetAddress
+import java.net.NetworkInterface
 import java.net.Socket
 
 object NetworkUtils {
 
     suspend fun getCurrentSubnetInfo(context: Context): SubnetInfo? = withContext(Dispatchers.IO) {
         try {
+            // Try modern approach first (Android 10+)
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val activeNetwork = connectivityManager.activeNetwork
+            val linkProperties = connectivityManager.getLinkProperties(activeNetwork)
+
+            if (linkProperties != null) {
+                val linkAddress = linkProperties.linkAddresses.firstOrNull {
+                    it.address is Inet4Address && !it.address.isLoopbackAddress
+                }
+
+                if (linkAddress != null) {
+                    val localIp = linkAddress.address.hostAddress ?: return@withContext null
+                    val prefixLength = linkAddress.prefixLength
+                    val subnetMask = cidrToSubnetMask(prefixLength)
+
+                    val networkAddress = calculateNetworkAddress(localIp, subnetMask)
+                    val ipRange = calculateIpRange(networkAddress, subnetMask)
+                    val totalHosts = calculateTotalHosts(subnetMask)
+
+                    return@withContext SubnetInfo(
+                        localIpAddress = localIp,
+                        subnetMask = subnetMask,
+                        networkAddress = networkAddress,
+                        cidrNotation = "$networkAddress/$prefixLength",
+                        ipRange = ipRange,
+                        totalHosts = totalHosts
+                    )
+                }
+            }
+
+            // Fallback to legacy WiFi manager approach
             val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
             val dhcpInfo = wifiManager.dhcpInfo
 
-            val localIp = intToIpAddress(dhcpInfo.ipAddress)
-            val subnetMask = intToIpAddress(dhcpInfo.netmask)
-            val gateway = intToIpAddress(dhcpInfo.gateway)
+            if (dhcpInfo.ipAddress != 0) {
+                val localIp = intToIpAddress(dhcpInfo.ipAddress)
+                val subnetMask = intToIpAddress(dhcpInfo.netmask)
 
-            if (localIp.isNullOrBlank() || subnetMask.isNullOrBlank()) {
-                return@withContext null
+                if (!localIp.isNullOrBlank() && !subnetMask.isNullOrBlank()) {
+                    val networkAddress = calculateNetworkAddress(localIp, subnetMask)
+                    val cidr = calculateCIDR(subnetMask)
+                    val ipRange = calculateIpRange(networkAddress, subnetMask)
+                    val totalHosts = calculateTotalHosts(subnetMask)
+
+                    return@withContext SubnetInfo(
+                        localIpAddress = localIp,
+                        subnetMask = subnetMask,
+                        networkAddress = networkAddress,
+                        cidrNotation = "$networkAddress/$cidr",
+                        ipRange = ipRange,
+                        totalHosts = totalHosts
+                    )
+                }
             }
 
-            val networkAddress = calculateNetworkAddress(localIp, subnetMask)
-            val cidr = calculateCIDR(subnetMask)
-            val ipRange = calculateIpRange(networkAddress, subnetMask)
-            val totalHosts = calculateTotalHosts(subnetMask)
+            // Last resort: enumerate network interfaces
+            val networkInterfaces = NetworkInterface.getNetworkInterfaces()
+            while (networkInterfaces.hasMoreElements()) {
+                val networkInterface = networkInterfaces.nextElement()
+                if (networkInterface.isUp && !networkInterface.isLoopback) {
+                    val addresses = networkInterface.inetAddresses
+                    while (addresses.hasMoreElements()) {
+                        val address = addresses.nextElement()
+                        if (address is Inet4Address && !address.isLoopbackAddress) {
+                            val localIp = address.hostAddress ?: continue
+                            val interfaceAddresses = networkInterface.interfaceAddresses
+                            val interfaceAddress = interfaceAddresses.firstOrNull {
+                                it.address is Inet4Address
+                            }
 
-            SubnetInfo(
-                localIpAddress = localIp,
-                subnetMask = subnetMask,
-                networkAddress = networkAddress,
-                cidrNotation = "$networkAddress/$cidr",
-                ipRange = ipRange,
-                totalHosts = totalHosts
-            )
+                            if (interfaceAddress != null) {
+                                val prefixLength = interfaceAddress.networkPrefixLength.toInt()
+                                val subnetMask = cidrToSubnetMask(prefixLength)
+                                val networkAddress = calculateNetworkAddress(localIp, subnetMask)
+                                val ipRange = calculateIpRange(networkAddress, subnetMask)
+                                val totalHosts = calculateTotalHosts(subnetMask)
+
+                                return@withContext SubnetInfo(
+                                    localIpAddress = localIp,
+                                    subnetMask = subnetMask,
+                                    networkAddress = networkAddress,
+                                    cidrNotation = "$networkAddress/$prefixLength",
+                                    ipRange = ipRange,
+                                    totalHosts = totalHosts
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            null
         } catch (e: Exception) {
             null
         }
@@ -118,6 +190,11 @@ object NetworkUtils {
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun cidrToSubnetMask(cidr: Int): String {
+        val mask = (0xffffffff.toInt() shl (32 - cidr))
+        return "${(mask shr 24) and 0xff}.${(mask shr 16) and 0xff}.${(mask shr 8) and 0xff}.${mask and 0xff}"
     }
 
     private fun calculateNetworkAddress(ip: String, mask: String): String {
