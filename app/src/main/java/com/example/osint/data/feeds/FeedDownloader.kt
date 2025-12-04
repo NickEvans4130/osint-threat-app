@@ -16,7 +16,7 @@ class FeedDownloader(private val context: Context) {
 
     private val feedUrls = mapOf(
         "urlhaus" to "https://urlhaus.abuse.ch/downloads/csv_recent/",
-        "phishtank" to "https://data.phishtank.com/data/online-valid.csv",
+        "phishtank" to "http://data.phishtank.com/data/online-valid.csv",
         "openphish" to "https://openphish.com/feed.txt",
         "blocklist" to "https://lists.blocklist.de/lists/all.txt",
         "firehol" to "https://raw.githubusercontent.com/firehol/blocklist-ipsets/master/firehol_level1.netset"
