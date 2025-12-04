@@ -20,6 +20,7 @@ sealed class Screen(val route: String) {
     object HashScanner : Screen("hash_scanner")
     object QRScanner : Screen("qr_scanner")
     object FeedStatus : Screen("feed_status")
+    object NetworkScanner : Screen("network_scanner")
 }
 
 @Composable
@@ -31,6 +32,7 @@ fun AppNavigation() {
     val database = ThreatDatabase.getDatabase(context)
     val repository = ThreatRepository(database)
     val feedDownloader = FeedDownloader(context)
+    val networkScannerRepository = com.example.osint.data.repository.NetworkScannerRepository(context)
 
     // Initialize use cases
     val computeRiskScoreUseCase = ComputeRiskScoreUseCase()
@@ -40,6 +42,8 @@ fun AppNavigation() {
     val parseFeedUseCase = ParseFeedUseCase()
     val refreshFeedsUseCase = RefreshFeedsUseCase(feedDownloader, repository, parseFeedUseCase)
     val getFeedStatusUseCase = GetFeedStatusUseCase(repository)
+    val probeHostUseCase = ProbeHostUseCase(networkScannerRepository)
+    val scanLocalNetworkUseCase = ScanLocalNetworkUseCase(networkScannerRepository, probeHostUseCase)
 
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
@@ -48,7 +52,8 @@ fun AppNavigation() {
                 onNavigateToIpScanner = { navController.navigate(Screen.IpScanner.route) },
                 onNavigateToHashScanner = { navController.navigate(Screen.HashScanner.route) },
                 onNavigateToQRScanner = { navController.navigate(Screen.QRScanner.route) },
-                onNavigateToFeedStatus = { navController.navigate(Screen.FeedStatus.route) }
+                onNavigateToFeedStatus = { navController.navigate(Screen.FeedStatus.route) },
+                onNavigateToNetworkScanner = { navController.navigate(Screen.NetworkScanner.route) }
             )
         }
 
@@ -97,6 +102,16 @@ fun AppNavigation() {
                 factory = FeedStatusViewModelFactory(getFeedStatusUseCase, refreshFeedsUseCase)
             )
             FeedStatusScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.NetworkScanner.route) {
+            val viewModel = viewModel<NetworkScannerViewModel>(
+                factory = NetworkScannerViewModelFactory(scanLocalNetworkUseCase, networkScannerRepository)
+            )
+            NetworkScannerScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

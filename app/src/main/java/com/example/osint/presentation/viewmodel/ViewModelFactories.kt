@@ -64,3 +64,16 @@ class FeedStatusViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+class NetworkScannerViewModelFactory(
+    private val scanLocalNetworkUseCase: ScanLocalNetworkUseCase,
+    private val repository: com.example.osint.data.repository.NetworkScannerRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(NetworkScannerViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return NetworkScannerViewModel(scanLocalNetworkUseCase, repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}

@@ -17,7 +17,8 @@ fun HomeScreen(
     onNavigateToIpScanner: () -> Unit,
     onNavigateToHashScanner: () -> Unit,
     onNavigateToQRScanner: () -> Unit,
-    onNavigateToFeedStatus: () -> Unit
+    onNavigateToFeedStatus: () -> Unit,
+    onNavigateToNetworkScanner: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -71,6 +72,13 @@ fun HomeScreen(
                 description = "Scan and analyze QR codes for threats",
                 icon = Icons.Default.QrCode,
                 onClick = onNavigateToQRScanner
+            )
+
+            ScannerCard(
+                title = "Network Scanner",
+                description = "Scan local network for active hosts and open ports",
+                icon = Icons.Default.NetworkCheck,
+                onClick = onNavigateToNetworkScanner
             )
 
             Spacer(modifier = Modifier.weight(1f))
