@@ -18,7 +18,8 @@ fun HomeScreen(
     onNavigateToHashScanner: () -> Unit,
     onNavigateToQRScanner: () -> Unit,
     onNavigateToFeedStatus: () -> Unit,
-    onNavigateToNetworkScanner: () -> Unit
+    onNavigateToNetworkScanner: () -> Unit,
+    onNavigateToMetadataInspector: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -79,6 +80,13 @@ fun HomeScreen(
                 description = "Scan local network for active hosts and open ports",
                 icon = Icons.Default.NetworkCheck,
                 onClick = onNavigateToNetworkScanner
+            )
+
+            ScannerCard(
+                title = "Metadata Inspector",
+                description = "Extract and analyze metadata from images and documents",
+                icon = Icons.Default.Info,
+                onClick = onNavigateToMetadataInspector
             )
 
             Spacer(modifier = Modifier.weight(1f))

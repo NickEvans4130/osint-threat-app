@@ -21,6 +21,7 @@ sealed class Screen(val route: String) {
     object QRScanner : Screen("qr_scanner")
     object FeedStatus : Screen("feed_status")
     object NetworkScanner : Screen("network_scanner")
+    object MetadataInspector : Screen("metadata_inspector")
 }
 
 @Composable
@@ -33,6 +34,7 @@ fun AppNavigation() {
     val repository = ThreatRepository(database)
     val feedDownloader = FeedDownloader(context)
     val networkScannerRepository = com.example.osint.data.repository.NetworkScannerRepository(context)
+    val metadataRepository = com.example.osint.data.repository.MetadataRepository(context)
 
     // Initialize use cases
     val computeRiskScoreUseCase = ComputeRiskScoreUseCase()
@@ -44,6 +46,8 @@ fun AppNavigation() {
     val getFeedStatusUseCase = GetFeedStatusUseCase(repository)
     val probeHostUseCase = ProbeHostUseCase(networkScannerRepository)
     val scanLocalNetworkUseCase = ScanLocalNetworkUseCase(networkScannerRepository, probeHostUseCase)
+    val parseImageMetadataUseCase = ParseImageMetadataUseCase(metadataRepository)
+    val stripImageExifUseCase = StripImageExifUseCase(metadataRepository)
 
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
@@ -53,7 +57,8 @@ fun AppNavigation() {
                 onNavigateToHashScanner = { navController.navigate(Screen.HashScanner.route) },
                 onNavigateToQRScanner = { navController.navigate(Screen.QRScanner.route) },
                 onNavigateToFeedStatus = { navController.navigate(Screen.FeedStatus.route) },
-                onNavigateToNetworkScanner = { navController.navigate(Screen.NetworkScanner.route) }
+                onNavigateToNetworkScanner = { navController.navigate(Screen.NetworkScanner.route) },
+                onNavigateToMetadataInspector = { navController.navigate(Screen.MetadataInspector.route) }
             )
         }
 
@@ -112,6 +117,16 @@ fun AppNavigation() {
                 factory = NetworkScannerViewModelFactory(scanLocalNetworkUseCase, networkScannerRepository)
             )
             NetworkScannerScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.MetadataInspector.route) {
+            val viewModel = viewModel<MetadataInspectorViewModel>(
+                factory = MetadataInspectorViewModelFactory(parseImageMetadataUseCase, stripImageExifUseCase)
+            )
+            MetadataInspectorScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

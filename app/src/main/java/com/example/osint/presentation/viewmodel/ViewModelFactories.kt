@@ -77,3 +77,16 @@ class NetworkScannerViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+class MetadataInspectorViewModelFactory(
+    private val parseImageMetadataUseCase: ParseImageMetadataUseCase,
+    private val stripImageExifUseCase: StripImageExifUseCase
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MetadataInspectorViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MetadataInspectorViewModel(parseImageMetadataUseCase, stripImageExifUseCase) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
