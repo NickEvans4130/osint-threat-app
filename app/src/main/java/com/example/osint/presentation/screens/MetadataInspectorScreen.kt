@@ -64,20 +64,20 @@ fun MetadataInspectorScreen(
         ) {
             when (val state = uiState) {
                 is MetadataInspectorUiState.Initial -> {
-                    InitialState(onSelectFile = { filePicker.launch("*/*") })
+                    MetadataInitialState(onSelectFile = { filePicker.launch("*/*") })
                 }
                 is MetadataInspectorUiState.Loading -> {
-                    LoadingState()
+                    MetadataLoadingState()
                 }
                 is MetadataInspectorUiState.Success -> {
-                    SuccessState(
+                    MetadataSuccessState(
                         metadata = state.metadata,
                         onSelectNewFile = { filePicker.launch("*/*") },
                         onStripExif = { viewModel.stripExif(Uri.parse(state.metadata.filePath)) }
                     )
                 }
                 is MetadataInspectorUiState.Error -> {
-                    ErrorState(
+                    MetadataErrorState(
                         message = state.message,
                         onRetry = { filePicker.launch("*/*") }
                     )
@@ -88,7 +88,7 @@ fun MetadataInspectorScreen(
 }
 
 @Composable
-private fun InitialState(onSelectFile: () -> Unit) {
+private fun MetadataInitialState(onSelectFile: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -127,7 +127,7 @@ private fun InitialState(onSelectFile: () -> Unit) {
 }
 
 @Composable
-private fun LoadingState() {
+private fun MetadataLoadingState() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -141,7 +141,7 @@ private fun LoadingState() {
 }
 
 @Composable
-private fun ErrorState(message: String, onRetry: () -> Unit) {
+private fun MetadataErrorState(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -175,7 +175,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun SuccessState(
+private fun MetadataSuccessState(
     metadata: FileMetadata,
     onSelectNewFile: () -> Unit,
     onStripExif: () -> Unit
