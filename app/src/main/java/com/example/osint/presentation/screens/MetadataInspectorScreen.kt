@@ -88,7 +88,7 @@ fun MetadataInspectorScreen(
 }
 
 @Composable
-fun InitialState(onSelectFile: () -> Unit) {
+private fun InitialState(onSelectFile: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -127,7 +127,7 @@ fun InitialState(onSelectFile: () -> Unit) {
 }
 
 @Composable
-fun LoadingState() {
+private fun LoadingState() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -141,7 +141,7 @@ fun LoadingState() {
 }
 
 @Composable
-fun ErrorState(message: String, onRetry: () -> Unit) {
+private fun ErrorState(message: String, onRetry: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -175,7 +175,7 @@ fun ErrorState(message: String, onRetry: () -> Unit) {
 }
 
 @Composable
-fun SuccessState(
+private fun SuccessState(
     metadata: FileMetadata,
     onSelectNewFile: () -> Unit,
     onStripExif: () -> Unit
@@ -226,7 +226,7 @@ fun SuccessState(
 }
 
 @Composable
-fun FileInfoCard(metadata: FileMetadata) {
+private fun FileInfoCard(metadata: FileMetadata) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -244,7 +244,7 @@ fun FileInfoCard(metadata: FileMetadata) {
 }
 
 @Composable
-fun ImagePreviewCard(filePath: String) {
+private fun ImagePreviewCard(filePath: String) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -266,7 +266,7 @@ fun ImagePreviewCard(filePath: String) {
 }
 
 @Composable
-fun ImageMetadataCard(imageMetadata: com.example.osint.domain.model.ImageMetadata) {
+private fun ImageMetadataCard(imageMetadata: com.example.osint.domain.model.ImageMetadata) {
     var expanded by remember { mutableStateOf(true) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -332,7 +332,7 @@ fun ImageMetadataCard(imageMetadata: com.example.osint.domain.model.ImageMetadat
 }
 
 @Composable
-fun GpsWarningCard(imageMetadata: com.example.osint.domain.model.ImageMetadata) {
+private fun GpsWarningCard(imageMetadata: com.example.osint.domain.model.ImageMetadata) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -381,7 +381,7 @@ fun GpsWarningCard(imageMetadata: com.example.osint.domain.model.ImageMetadata) 
 }
 
 @Composable
-fun DocumentMetadataCard(documentMetadata: com.example.osint.domain.model.DocumentMetadata) {
+private fun DocumentMetadataCard(documentMetadata: com.example.osint.domain.model.DocumentMetadata) {
     var expanded by remember { mutableStateOf(true) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -444,7 +444,7 @@ fun DocumentMetadataCard(documentMetadata: com.example.osint.domain.model.Docume
 }
 
 @Composable
-fun MetadataRow(
+private fun MetadataRow(
     label: String,
     value: String,
     isSensitive: Boolean = false,
