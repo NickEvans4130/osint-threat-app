@@ -1,5 +1,6 @@
 package com.example.osint.presentation.viewmodel
 
+import android.content.IntentSender
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +28,13 @@ class SecureDeletionViewModel(
 
     private val _selectedMethod = MutableStateFlow(SecureDeletionMethod.DOD_5220_22_M)
     val selectedMethod: StateFlow<SecureDeletionMethod> = _selectedMethod.asStateFlow()
+
+    private val _deletePermissionRequest = MutableStateFlow<IntentSender?>(null)
+    val deletePermissionRequest: StateFlow<IntentSender?> = _deletePermissionRequest.asStateFlow()
+
+    // Store pending deletion data for after permission is granted
+    private var pendingFileMapping: List<Pair<Uri, File>>? = null
+    private var pendingErrorLog: MutableList<String>? = null
 
     fun addFile(uri: Uri) {
         viewModelScope.launch {
@@ -119,7 +127,7 @@ class SecureDeletionViewModel(
                 // Now delete the original files via ContentResolver
                 errorLog.add("\nDeleting original files...")
                 var deletedCount = 0
-                var failedDeletions = mutableListOf<String>()
+                val failedUris = mutableListOf<Uri>()
 
                 fileMapping.forEach { (uri, cachedFile) ->
                     try {
@@ -129,11 +137,11 @@ class SecureDeletionViewModel(
                             errorLog.add("✓ Deleted original: $uri")
                         } else {
                             errorLog.add("✗ Failed to delete: $uri")
-                            failedDeletions.add(uri.toString())
+                            failedUris.add(uri)
                         }
                     } catch (e: Exception) {
                         errorLog.add("✗ Exception deleting $uri: ${e.message}")
-                        failedDeletions.add("$uri (${e.message})")
+                        failedUris.add(uri)
                     }
 
                     // Clean up cache file if it still exists
@@ -149,9 +157,28 @@ class SecureDeletionViewModel(
 
                 errorLog.add("\nResult: $deletedCount of ${fileMapping.size} files deleted")
 
-                // If no files were deleted, show error
+                // If some files failed to delete, request permission (Android 11+)
+                if (failedUris.isNotEmpty()) {
+                    errorLog.add("\n${failedUris.size} files require user permission to delete")
+
+                    // Store state for after permission granted
+                    pendingFileMapping = fileMapping
+                    pendingErrorLog = errorLog
+
+                    // Request permission
+                    val intentSender = repository.createDeleteRequest(failedUris)
+                    if (intentSender != null) {
+                        errorLog.add("Requesting user permission...")
+                        _deletePermissionRequest.value = intentSender
+                        return@launch
+                    } else {
+                        errorLog.add("✗ Unable to request permission (Android version < 11)")
+                    }
+                }
+
+                // If no files were deleted at all, show error
                 if (deletedCount == 0) {
-                    val errorMessage = "Failed to delete files.\n\nDebug log:\n${errorLog.joinToString("\n")}\n\nFailed URIs:\n${failedDeletions.joinToString("\n")}"
+                    val errorMessage = "Failed to delete files.\n\nDebug log:\n${errorLog.joinToString("\n")}"
                     _uiState.value = SecureDeletionUiState.Error(errorMessage)
                     return@launch
                 }
@@ -171,8 +198,47 @@ class SecureDeletionViewModel(
         }
     }
 
+    fun onPermissionResult(granted: Boolean) {
+        viewModelScope.launch {
+            val errorLog = pendingErrorLog
+            val fileMapping = pendingFileMapping
+
+            if (granted && errorLog != null && fileMapping != null) {
+                errorLog.add("\n✓ User granted delete permission")
+
+                // Files were already overwritten, just need to report success
+                val totalFiles = fileMapping.size
+                errorLog.add("✓ All files securely overwritten and deleted")
+
+                _uiState.value = SecureDeletionUiState.Complete(
+                    filesDeleted = totalFiles,
+                    method = _selectedMethod.value
+                )
+
+                // Clear selected files
+                _selectedFiles.value = emptyList()
+            } else {
+                errorLog?.add("\n✗ User denied delete permission")
+                val errorMessage = if (errorLog != null) {
+                    "User denied permission to delete files.\n\nThe files were securely overwritten in cache, but the originals remain.\n\nDebug log:\n${errorLog.joinToString("\n")}"
+                } else {
+                    "User denied permission to delete files."
+                }
+                _uiState.value = SecureDeletionUiState.Error(errorMessage)
+            }
+
+            // Clear pending data
+            pendingFileMapping = null
+            pendingErrorLog = null
+            _deletePermissionRequest.value = null
+        }
+    }
+
     fun reset() {
         _uiState.value = SecureDeletionUiState.Idle
+        pendingFileMapping = null
+        pendingErrorLog = null
+        _deletePermissionRequest.value = null
     }
 }
 

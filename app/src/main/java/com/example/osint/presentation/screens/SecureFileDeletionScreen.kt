@@ -40,12 +40,33 @@ fun SecureFileDeletionScreen(
     val uiState by viewModel.uiState.collectAsState()
     val selectedFiles by viewModel.selectedFiles.collectAsState()
     val selectedMethod by viewModel.selectedMethod.collectAsState()
+    val deletePermissionRequest by viewModel.deletePermissionRequest.collectAsState()
 
     val filePicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris: List<Uri> ->
         uris.forEach { uri ->
             viewModel.addFile(uri)
+        }
+    }
+
+    val deletePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        val granted = result.resultCode == android.app.Activity.RESULT_OK
+        viewModel.onPermissionResult(granted)
+    }
+
+    // Launch permission request when needed
+    LaunchedEffect(deletePermissionRequest) {
+        deletePermissionRequest?.let { intentSender ->
+            try {
+                val request = androidx.activity.result.IntentSenderRequest.Builder(intentSender).build()
+                deletePermissionLauncher.launch(request)
+            } catch (e: Exception) {
+                android.util.Log.e("SecureDeletion", "Error launching permission request: ${e.message}")
+                viewModel.onPermissionResult(false)
+            }
         }
     }
 

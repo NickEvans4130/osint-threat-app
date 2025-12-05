@@ -1,8 +1,13 @@
 package com.example.osint.data.repository
 
+import android.app.Activity
 import android.content.Context
+import android.content.IntentSender
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import android.provider.OpenableColumns
+import androidx.activity.result.IntentSenderRequest
 import com.example.osint.domain.model.FileToDelete
 import com.example.osint.domain.model.SecureDeletionMethod
 import com.example.osint.domain.model.SecureDeletionProgress
@@ -141,16 +146,42 @@ class SecureDeletionRepository(private val context: Context) {
         try {
             android.util.Log.d("SecureDeletion", "Attempting to delete URI: $uri")
 
+            // Try direct deletion first
             val result = context.contentResolver.delete(uri, null, null)
             android.util.Log.d("SecureDeletion", "Delete result: $result rows")
 
-            result > 0
+            if (result > 0) {
+                return@withContext true
+            }
+
+            // If direct deletion failed and we're on Android 11+, we need user permission
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.util.Log.d("SecureDeletion", "Direct delete failed, Android 11+ requires user permission")
+                // We can't request permission from repository, need to handle in UI layer
+                return@withContext false
+            }
+
+            false
         } catch (e: SecurityException) {
-            android.util.Log.e("SecureDeletion", "SecurityException deleting file: ${e.message}", e)
+            android.util.Log.e("SecureDeletion", "SecurityException: App lacks permission to delete this file", e)
             false
         } catch (e: Exception) {
             android.util.Log.e("SecureDeletion", "Error deleting file: ${e.message}", e)
             false
+        }
+    }
+
+    fun createDeleteRequest(uris: List<Uri>): IntentSender? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val pendingIntent = MediaStore.createDeleteRequest(context.contentResolver, uris)
+                pendingIntent.intentSender
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SecureDeletion", "Error creating delete request: ${e.message}", e)
+            null
         }
     }
 }
