@@ -176,11 +176,33 @@ class SecureDeletionViewModel(
                     }
                 }
 
-                // If no files were deleted at all, show error
+                // If no files were deleted at all, check if we at least overwrote them
                 if (deletedCount == 0) {
-                    val errorMessage = "Failed to delete files.\n\nDebug log:\n${errorLog.joinToString("\n")}"
-                    _uiState.value = SecureDeletionUiState.Error(errorMessage)
-                    return@launch
+                    // Check if overwrite was successful
+                    val overwriteSuccessful = errorLog.any { it.contains("✓ Secure overwrite complete") }
+
+                    if (overwriteSuccessful) {
+                        // Overwrite succeeded, deletion failed - this is partial success
+                        val warningMessage = "⚠️ PARTIAL SUCCESS\n\n" +
+                            "File data was securely overwritten ${_selectedMethod.value.passes} times and is UNRECOVERABLE.\n\n" +
+                            "However, the file entry could not be removed from storage due to Android ${Build.VERSION.SDK_INT} permissions.\n\n" +
+                            "The file still appears in your gallery, but contains only random/zeros data. You can manually delete it normally.\n\n" +
+                            "Debug log:\n${errorLog.joinToString("\n")}"
+
+                        _uiState.value = SecureDeletionUiState.PartialSuccess(
+                            filesOverwritten = fileMapping.size,
+                            filesDeleted = 0,
+                            method = _selectedMethod.value,
+                            message = warningMessage
+                        )
+                        _selectedFiles.value = emptyList()
+                        return@launch
+                    } else {
+                        // Complete failure
+                        val errorMessage = "Failed to delete files.\n\nDebug log:\n${errorLog.joinToString("\n")}"
+                        _uiState.value = SecureDeletionUiState.Error(errorMessage)
+                        return@launch
+                    }
                 }
 
                 // Deletion complete
@@ -246,5 +268,11 @@ sealed class SecureDeletionUiState {
     object Idle : SecureDeletionUiState()
     data class Deleting(val progress: SecureDeletionProgress) : SecureDeletionUiState()
     data class Complete(val filesDeleted: Int, val method: SecureDeletionMethod) : SecureDeletionUiState()
+    data class PartialSuccess(
+        val filesOverwritten: Int,
+        val filesDeleted: Int,
+        val method: SecureDeletionMethod,
+        val message: String
+    ) : SecureDeletionUiState()
     data class Error(val message: String) : SecureDeletionUiState()
 }
