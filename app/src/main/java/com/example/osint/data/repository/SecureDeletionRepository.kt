@@ -145,8 +145,14 @@ class SecureDeletionRepository(private val context: Context) {
     suspend fun deleteOriginalFile(uri: Uri): Boolean = withContext(Dispatchers.IO) {
         try {
             android.util.Log.d("SecureDeletion", "Attempting to delete URI: $uri")
+            android.util.Log.d("SecureDeletion", "Android SDK: ${Build.VERSION.SDK_INT}")
 
-            // Try direct deletion first
+            // For Android 10 (Q) and below, try using DocumentFile for better compatibility
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                return@withContext deleteViaDocumentFile(uri)
+            }
+
+            // Android 11+ - try direct deletion first
             val result = context.contentResolver.delete(uri, null, null)
             android.util.Log.d("SecureDeletion", "Delete result: $result rows")
 
@@ -154,19 +160,39 @@ class SecureDeletionRepository(private val context: Context) {
                 return@withContext true
             }
 
-            // If direct deletion failed and we're on Android 11+, we need user permission
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                android.util.Log.d("SecureDeletion", "Direct delete failed, Android 11+ requires user permission")
-                // We can't request permission from repository, need to handle in UI layer
-                return@withContext false
-            }
-
+            // If direct deletion failed, we need user permission (handled by createDeleteRequest)
+            android.util.Log.d("SecureDeletion", "Direct delete failed, requires user permission")
             false
+
         } catch (e: SecurityException) {
-            android.util.Log.e("SecureDeletion", "SecurityException: App lacks permission to delete this file", e)
+            android.util.Log.e("SecureDeletion", "SecurityException: ${e.message}", e)
+            // For older Android, try DocumentFile approach
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                return@withContext deleteViaDocumentFile(uri)
+            }
             false
         } catch (e: Exception) {
             android.util.Log.e("SecureDeletion", "Error deleting file: ${e.message}", e)
+            false
+        }
+    }
+
+    private suspend fun deleteViaDocumentFile(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        try {
+            android.util.Log.d("SecureDeletion", "Trying DocumentFile approach for Android < 11")
+
+            val documentFile = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)
+            if (documentFile != null && documentFile.exists()) {
+                val deleted = documentFile.delete()
+                android.util.Log.d("SecureDeletion", "DocumentFile delete result: $deleted")
+                return@withContext deleted
+            } else {
+                android.util.Log.e("SecureDeletion", "DocumentFile is null or doesn't exist")
+            }
+
+            false
+        } catch (e: Exception) {
+            android.util.Log.e("SecureDeletion", "DocumentFile delete error: ${e.message}", e)
             false
         }
     }
