@@ -67,12 +67,13 @@ class FeedStatusViewModelFactory(
 
 class NetworkScannerViewModelFactory(
     private val scanLocalNetworkUseCase: ScanLocalNetworkUseCase,
-    private val repository: com.example.osint.data.repository.NetworkScannerRepository
+    private val repository: com.example.osint.data.repository.NetworkScannerRepository,
+    private val deviceRepository: com.example.osint.data.repository.DeviceRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(NetworkScannerViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return NetworkScannerViewModel(scanLocalNetworkUseCase, repository) as T
+            return NetworkScannerViewModel(scanLocalNetworkUseCase, repository, deviceRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
@@ -86,6 +87,32 @@ class MetadataInspectorViewModelFactory(
         if (modelClass.isAssignableFrom(MetadataInspectorViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return MetadataInspectorViewModel(parseImageMetadataUseCase, stripImageExifUseCase) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class NetworkMapViewModelFactory(
+    private val getScannedDevicesUseCase: GetScannedDevicesUseCase,
+    private val loadOUIDatabaseUseCase: LoadOUIDatabaseUseCase
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(NetworkMapViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return NetworkMapViewModel(getScannedDevicesUseCase, loadOUIDatabaseUseCase) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class DeviceDetailViewModelFactory(
+    private val getDeviceDetailsUseCase: GetDeviceDetailsUseCase,
+    private val ipAddress: String
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(DeviceDetailViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return DeviceDetailViewModel(getDeviceDetailsUseCase, ipAddress) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

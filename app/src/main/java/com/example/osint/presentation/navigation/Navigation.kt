@@ -22,6 +22,10 @@ sealed class Screen(val route: String) {
     object FeedStatus : Screen("feed_status")
     object NetworkScanner : Screen("network_scanner")
     object MetadataInspector : Screen("metadata_inspector")
+    object NetworkMap : Screen("network_map")
+    object DeviceDetail : Screen("device_detail/{ipAddress}") {
+        fun createRoute(ipAddress: String) = "device_detail/$ipAddress"
+    }
 }
 
 @Composable
@@ -35,6 +39,7 @@ fun AppNavigation() {
     val feedDownloader = FeedDownloader(context)
     val networkScannerRepository = com.example.osint.data.repository.NetworkScannerRepository(context)
     val metadataRepository = com.example.osint.data.repository.MetadataRepository(context)
+    val deviceRepository = com.example.osint.data.repository.DeviceRepository(context)
 
     // Initialize use cases
     val computeRiskScoreUseCase = ComputeRiskScoreUseCase()
@@ -48,6 +53,9 @@ fun AppNavigation() {
     val scanLocalNetworkUseCase = ScanLocalNetworkUseCase(networkScannerRepository, probeHostUseCase)
     val parseImageMetadataUseCase = ParseImageMetadataUseCase(metadataRepository)
     val stripImageExifUseCase = StripImageExifUseCase(metadataRepository)
+    val getScannedDevicesUseCase = GetScannedDevicesUseCase(deviceRepository)
+    val getDeviceDetailsUseCase = GetDeviceDetailsUseCase(deviceRepository)
+    val loadOUIDatabaseUseCase = LoadOUIDatabaseUseCase(deviceRepository)
 
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
@@ -114,11 +122,12 @@ fun AppNavigation() {
 
         composable(Screen.NetworkScanner.route) {
             val viewModel = viewModel<NetworkScannerViewModel>(
-                factory = NetworkScannerViewModelFactory(scanLocalNetworkUseCase, networkScannerRepository)
+                factory = NetworkScannerViewModelFactory(scanLocalNetworkUseCase, networkScannerRepository, deviceRepository)
             )
             NetworkScannerScreen(
                 viewModel = viewModel,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToNetworkMap = { navController.navigate(Screen.NetworkMap.route) }
             )
         }
 
@@ -127,6 +136,30 @@ fun AppNavigation() {
                 factory = MetadataInspectorViewModelFactory(parseImageMetadataUseCase, stripImageExifUseCase)
             )
             MetadataInspectorScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.NetworkMap.route) {
+            val viewModel = viewModel<NetworkMapViewModel>(
+                factory = NetworkMapViewModelFactory(getScannedDevicesUseCase, loadOUIDatabaseUseCase)
+            )
+            NetworkMapScreen(
+                viewModel = viewModel,
+                onNavigateToDeviceDetail = { ipAddress ->
+                    navController.navigate(Screen.DeviceDetail.createRoute(ipAddress))
+                },
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.DeviceDetail.route) { backStackEntry ->
+            val ipAddress = backStackEntry.arguments?.getString("ipAddress") ?: ""
+            val viewModel = viewModel<DeviceDetailViewModel>(
+                factory = DeviceDetailViewModelFactory(getDeviceDetailsUseCase, ipAddress)
+            )
+            DeviceDetailScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

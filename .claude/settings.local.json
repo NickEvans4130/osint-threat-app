@@ -14,7 +14,11 @@
       "Bash(export JAVA_HOME=\"C:/Program Files/Eclipse Adoptium/jdk-17.0.17.10-hotspot\")",
       "Bash(./gradlew --stop)",
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "Bash(git restore:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

@@ -26,7 +26,8 @@ import com.example.osint.presentation.viewmodel.NetworkScannerViewModel
 @Composable
 fun NetworkScannerScreen(
     viewModel: NetworkScannerViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    onNavigateToNetworkMap: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val selectedHost by viewModel.selectedHost.collectAsState()
@@ -70,7 +71,8 @@ fun NetworkScannerScreen(
                         hosts = state.hosts,
                         subnetInfo = state.subnetInfo,
                         onScanAgain = { viewModel.startScan() },
-                        onHostClick = { host -> viewModel.selectHost(host) }
+                        onHostClick = { host -> viewModel.selectHost(host) },
+                        onViewNetworkMap = onNavigateToNetworkMap
                     )
                 }
                 is NetworkScannerUiState.Error -> {
@@ -229,7 +231,8 @@ fun CompleteState(
     hosts: List<NetworkHost>,
     subnetInfo: com.example.osint.domain.model.SubnetInfo,
     onScanAgain: () -> Unit,
-    onHostClick: (NetworkHost) -> Unit
+    onHostClick: (NetworkHost) -> Unit,
+    onViewNetworkMap: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -259,6 +262,17 @@ fun CompleteState(
                         Icon(Icons.Default.Refresh, contentDescription = "Scan Again")
                     }
                 }
+            }
+        }
+
+        if (hosts.isNotEmpty()) {
+            Button(
+                onClick = onViewNetworkMap,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Map, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("View Network Map")
             }
         }
 

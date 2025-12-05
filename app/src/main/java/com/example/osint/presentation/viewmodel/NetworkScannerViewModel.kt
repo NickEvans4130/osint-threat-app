@@ -7,6 +7,7 @@ import com.example.osint.domain.model.NetworkScanProgress
 import com.example.osint.domain.model.SubnetInfo
 import com.example.osint.domain.usecase.ScanLocalNetworkUseCase
 import com.example.osint.data.repository.NetworkScannerRepository
+import com.example.osint.data.repository.DeviceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,7 +16,8 @@ import kotlinx.coroutines.launch
 
 class NetworkScannerViewModel(
     private val scanLocalNetworkUseCase: ScanLocalNetworkUseCase,
-    private val repository: NetworkScannerRepository
+    private val repository: NetworkScannerRepository,
+    private val deviceRepository: DeviceRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<NetworkScannerUiState>(NetworkScannerUiState.Initial)
@@ -71,6 +73,7 @@ class NetworkScannerViewModel(
                     _uiState.value = NetworkScannerUiState.Scanning(progress, currentSubnetInfo!!)
 
                     if (progress.scannedHosts == progress.totalHosts && progress.totalHosts > 0) {
+                        deviceRepository.saveScannedDevices(progress.foundHosts)
                         _uiState.value = NetworkScannerUiState.Complete(
                             progress.foundHosts,
                             currentSubnetInfo!!
