@@ -152,6 +152,13 @@ private fun IdleContent(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "How it works: The file is copied to secure storage, overwritten multiple times with the selected method, then both the copy and original are permanently deleted.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    )
                 }
             }
         }

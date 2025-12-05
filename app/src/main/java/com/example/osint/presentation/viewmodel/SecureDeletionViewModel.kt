@@ -73,31 +73,45 @@ class SecureDeletionViewModel(
             )
 
             try {
-                // Convert FileToDelete to actual Files
-                val actualFiles = files.mapNotNull { fileToDelete ->
-                    // First try to get file from URI
-                    val file = repository.getFileFromUri(fileToDelete.uri)
-                    if (file != null && file.exists()) {
-                        file
+                // Map FileToDelete with their cached copies
+                val fileMapping = files.mapNotNull { fileToDelete ->
+                    // Copy file to cache for overwriting
+                    val cachedFile = repository.copyUriToInternalStorage(fileToDelete.uri, fileToDelete.name)
+                    if (cachedFile != null) {
+                        Pair(fileToDelete.uri, cachedFile)
                     } else {
-                        // If URI doesn't give us direct file access, copy to cache
-                        repository.copyUriToInternalStorage(fileToDelete.uri, fileToDelete.name)
+                        null
                     }
                 }
 
-                if (actualFiles.isEmpty()) {
+                if (fileMapping.isEmpty()) {
                     _uiState.value = SecureDeletionUiState.Error("Unable to access selected files")
                     return@launch
                 }
 
-                secureDeleteFilesUseCase(actualFiles, _selectedMethod.value)
+                val cachedFiles = fileMapping.map { it.second }
+
+                // Securely overwrite the cached copies
+                secureDeleteFilesUseCase(cachedFiles, _selectedMethod.value)
                     .collect { progress ->
                         _uiState.value = SecureDeletionUiState.Deleting(progress)
                     }
 
+                // Now delete the original files via ContentResolver
+                var deletedCount = 0
+                fileMapping.forEach { (uri, cachedFile) ->
+                    if (repository.deleteOriginalFile(uri)) {
+                        deletedCount++
+                    }
+                    // Clean up cache file if it still exists
+                    if (cachedFile.exists()) {
+                        cachedFile.delete()
+                    }
+                }
+
                 // Deletion complete
                 _uiState.value = SecureDeletionUiState.Complete(
-                    filesDeleted = actualFiles.size,
+                    filesDeleted = deletedCount,
                     method = _selectedMethod.value
                 )
 

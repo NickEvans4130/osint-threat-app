@@ -104,9 +104,9 @@ class SecureDeletionRepository(private val context: Context) {
         return deleter.getFileFromUri(uri)
     }
 
-    fun copyUriToInternalStorage(uri: Uri, fileName: String): File? {
-        return try {
-            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+    suspend fun copyUriToInternalStorage(uri: Uri, fileName: String): File? = withContext(Dispatchers.IO) {
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
             val outputFile = File(context.cacheDir, fileName)
 
             outputFile.outputStream().use { outputStream ->
@@ -116,6 +116,14 @@ class SecureDeletionRepository(private val context: Context) {
             outputFile
         } catch (e: Exception) {
             null
+        }
+    }
+
+    suspend fun deleteOriginalFile(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        try {
+            context.contentResolver.delete(uri, null, null) > 0
+        } catch (e: Exception) {
+            false
         }
     }
 }
