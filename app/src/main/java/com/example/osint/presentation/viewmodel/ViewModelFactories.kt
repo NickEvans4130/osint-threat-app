@@ -117,3 +117,16 @@ class DeviceDetailViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+class SecureDeletionViewModelFactory(
+    private val secureDeleteFilesUseCase: SecureDeleteFilesUseCase,
+    private val repository: com.example.osint.data.repository.SecureDeletionRepository
+) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(SecureDeletionViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return SecureDeletionViewModel(secureDeleteFilesUseCase, repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}

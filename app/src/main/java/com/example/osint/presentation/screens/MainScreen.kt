@@ -30,6 +30,7 @@ fun MainScreen(
     onNavigateToNetworkScanner: () -> Unit,
     onNavigateToNetworkMap: () -> Unit,
     onNavigateToMetadataInspector: () -> Unit,
+    onNavigateToSecureFileDeletion: () -> Unit,
     onNavigateToFeedStatus: () -> Unit
 ) {
     var selectedPage by remember { mutableStateOf(BottomNavPage.THREAT_INTEL) }
@@ -80,7 +81,8 @@ fun MainScreen(
                     onNavigateToNetworkMap = onNavigateToNetworkMap
                 )
                 BottomNavPage.PRIVACY -> PrivacyToolsPage(
-                    onNavigateToMetadataInspector = onNavigateToMetadataInspector
+                    onNavigateToMetadataInspector = onNavigateToMetadataInspector,
+                    onNavigateToSecureFileDeletion = onNavigateToSecureFileDeletion
                 )
                 BottomNavPage.SETTINGS -> SettingsPage(
                     onNavigateToFeedStatus = onNavigateToFeedStatus

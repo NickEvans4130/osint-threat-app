@@ -23,6 +23,7 @@ sealed class Screen(val route: String) {
     object NetworkScanner : Screen("network_scanner")
     object MetadataInspector : Screen("metadata_inspector")
     object NetworkMap : Screen("network_map")
+    object SecureFileDeletion : Screen("secure_file_deletion")
     object DeviceDetail : Screen("device_detail/{ipAddress}") {
         fun createRoute(ipAddress: String) = "device_detail/$ipAddress"
     }
@@ -40,6 +41,7 @@ fun AppNavigation() {
     val networkScannerRepository = com.example.osint.data.repository.NetworkScannerRepository(context)
     val metadataRepository = com.example.osint.data.repository.MetadataRepository(context)
     val deviceRepository = com.example.osint.data.repository.DeviceRepository(context)
+    val secureDeletionRepository = com.example.osint.data.repository.SecureDeletionRepository(context)
 
     // Initialize use cases
     val computeRiskScoreUseCase = ComputeRiskScoreUseCase()
@@ -56,6 +58,7 @@ fun AppNavigation() {
     val getScannedDevicesUseCase = GetScannedDevicesUseCase(deviceRepository)
     val getDeviceDetailsUseCase = GetDeviceDetailsUseCase(deviceRepository)
     val loadOUIDatabaseUseCase = LoadOUIDatabaseUseCase(deviceRepository)
+    val secureDeleteFilesUseCase = SecureDeleteFilesUseCase(secureDeletionRepository)
 
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
@@ -67,6 +70,7 @@ fun AppNavigation() {
                 onNavigateToNetworkScanner = { navController.navigate(Screen.NetworkScanner.route) },
                 onNavigateToNetworkMap = { navController.navigate(Screen.NetworkMap.route) },
                 onNavigateToMetadataInspector = { navController.navigate(Screen.MetadataInspector.route) },
+                onNavigateToSecureFileDeletion = { navController.navigate(Screen.SecureFileDeletion.route) },
                 onNavigateToFeedStatus = { navController.navigate(Screen.FeedStatus.route) }
             )
         }
@@ -161,6 +165,16 @@ fun AppNavigation() {
                 factory = DeviceDetailViewModelFactory(getDeviceDetailsUseCase, ipAddress)
             )
             DeviceDetailScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.SecureFileDeletion.route) {
+            val viewModel = viewModel<SecureDeletionViewModel>(
+                factory = SecureDeletionViewModelFactory(secureDeleteFilesUseCase, secureDeletionRepository)
+            )
+            SecureFileDeletionScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

@@ -17,7 +17,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun PrivacyToolsPage(
-    onNavigateToMetadataInspector: () -> Unit
+    onNavigateToMetadataInspector: () -> Unit,
+    onNavigateToSecureFileDeletion: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -84,6 +85,17 @@ fun PrivacyToolsPage(
                     MaterialTheme.colorScheme.primaryContainer
                 ),
                 onClick = onNavigateToMetadataInspector
+            )
+
+            EnhancedToolCard(
+                title = "Secure File Deletion",
+                description = "Permanently erase files using military-grade overwriting methods (DoD, Gutmann). Deleted files cannot be recovered",
+                icon = Icons.Default.DeleteForever,
+                gradient = listOf(
+                    MaterialTheme.colorScheme.errorContainer,
+                    MaterialTheme.colorScheme.tertiaryContainer
+                ),
+                onClick = onNavigateToSecureFileDeletion
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -205,7 +217,6 @@ fun PrivacyToolsPage(
             )
 
             ComingSoonCard("Password Strength Analyzer", Icons.Default.Password)
-            ComingSoonCard("Secure File Deletion", Icons.Default.DeleteForever)
             ComingSoonCard("Encryption Tools", Icons.Default.EnhancedEncryption)
         }
     }
