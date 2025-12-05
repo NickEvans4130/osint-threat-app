@@ -91,13 +91,15 @@ class SecureFileDeleter(private val context: Context) {
         var totalBytesProcessed = 0L
 
         for (file in files) {
-            if (!file.exists()) continue
+            if (!file.exists()) {
+                continue
+            }
 
             val fileSize = file.length()
             val totalPasses = method.passes
 
-            withContext(Dispatchers.IO) {
-                try {
+            try {
+                withContext(Dispatchers.IO) {
                     RandomAccessFile(file, "rws").use { raf ->
                         for (pass in 0 until totalPasses) {
                             raf.seek(0)
@@ -139,27 +141,27 @@ class SecureFileDeleter(private val context: Context) {
                     }
 
                     file.delete()
-                    filesDeleted++
-
-                    // Emit completion for this file
-                    emit(
-                        SecureDeletionProgress(
-                            currentFile = file.name,
-                            currentPass = totalPasses - 1,
-                            totalPasses = totalPasses,
-                            bytesProcessed = fileSize,
-                            totalBytes = fileSize,
-                            filesDeleted = filesDeleted,
-                            totalFiles = totalFiles,
-                            elapsedTimeMs = System.currentTimeMillis() - startTime,
-                            estimatedTimeRemainingMs = 0L
-                        )
-                    )
-
-                } catch (e: Exception) {
-                    // Continue with next file on error
-                    continue
                 }
+
+                filesDeleted++
+
+                // Emit completion for this file
+                emit(
+                    SecureDeletionProgress(
+                        currentFile = file.name,
+                        currentPass = totalPasses - 1,
+                        totalPasses = totalPasses,
+                        bytesProcessed = fileSize,
+                        totalBytes = fileSize,
+                        filesDeleted = filesDeleted,
+                        totalFiles = totalFiles,
+                        elapsedTimeMs = System.currentTimeMillis() - startTime,
+                        estimatedTimeRemainingMs = 0L
+                    )
+                )
+
+            } catch (e: Exception) {
+                // Continue with next file on error
             }
         }
     }
