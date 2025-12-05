@@ -59,14 +59,15 @@ fun AppNavigation() {
 
     NavHost(navController = navController, startDestination = Screen.Home.route) {
         composable(Screen.Home.route) {
-            HomeScreen(
+            MainScreen(
                 onNavigateToUrlScanner = { navController.navigate(Screen.UrlScanner.route) },
                 onNavigateToIpScanner = { navController.navigate(Screen.IpScanner.route) },
                 onNavigateToHashScanner = { navController.navigate(Screen.HashScanner.route) },
                 onNavigateToQRScanner = { navController.navigate(Screen.QRScanner.route) },
-                onNavigateToFeedStatus = { navController.navigate(Screen.FeedStatus.route) },
                 onNavigateToNetworkScanner = { navController.navigate(Screen.NetworkScanner.route) },
-                onNavigateToMetadataInspector = { navController.navigate(Screen.MetadataInspector.route) }
+                onNavigateToNetworkMap = { navController.navigate(Screen.NetworkMap.route) },
+                onNavigateToMetadataInspector = { navController.navigate(Screen.MetadataInspector.route) },
+                onNavigateToFeedStatus = { navController.navigate(Screen.FeedStatus.route) }
             )
         }
 
