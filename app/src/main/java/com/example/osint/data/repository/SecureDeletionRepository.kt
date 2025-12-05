@@ -106,23 +106,50 @@ class SecureDeletionRepository(private val context: Context) {
 
     suspend fun copyUriToInternalStorage(uri: Uri, fileName: String): File? = withContext(Dispatchers.IO) {
         try {
-            val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext null
-            val outputFile = File(context.cacheDir, fileName)
+            android.util.Log.d("SecureDeletion", "Copying URI to cache: $uri")
 
-            outputFile.outputStream().use { outputStream ->
-                inputStream.copyTo(outputStream)
+            val inputStream = context.contentResolver.openInputStream(uri)
+            if (inputStream == null) {
+                android.util.Log.e("SecureDeletion", "Failed to open input stream for: $uri")
+                return@withContext null
             }
 
-            outputFile
+            val outputFile = File(context.cacheDir, "secure_delete_$fileName")
+            android.util.Log.d("SecureDeletion", "Output file: ${outputFile.absolutePath}")
+
+            inputStream.use { input ->
+                outputFile.outputStream().use { output ->
+                    val bytesCopied = input.copyTo(output)
+                    android.util.Log.d("SecureDeletion", "Copied $bytesCopied bytes")
+                }
+            }
+
+            if (outputFile.exists() && outputFile.length() > 0) {
+                android.util.Log.d("SecureDeletion", "✓ Cache file created: ${outputFile.length()} bytes")
+                outputFile
+            } else {
+                android.util.Log.e("SecureDeletion", "✗ Cache file invalid or empty")
+                null
+            }
         } catch (e: Exception) {
+            android.util.Log.e("SecureDeletion", "Error copying to cache: ${e.message}", e)
             null
         }
     }
 
     suspend fun deleteOriginalFile(uri: Uri): Boolean = withContext(Dispatchers.IO) {
         try {
-            context.contentResolver.delete(uri, null, null) > 0
+            android.util.Log.d("SecureDeletion", "Attempting to delete URI: $uri")
+
+            val result = context.contentResolver.delete(uri, null, null)
+            android.util.Log.d("SecureDeletion", "Delete result: $result rows")
+
+            result > 0
+        } catch (e: SecurityException) {
+            android.util.Log.e("SecureDeletion", "SecurityException deleting file: ${e.message}", e)
+            false
         } catch (e: Exception) {
+            android.util.Log.e("SecureDeletion", "Error deleting file: ${e.message}", e)
             false
         }
     }

@@ -73,40 +73,87 @@ class SecureDeletionViewModel(
             )
 
             try {
+                val errorLog = mutableListOf<String>()
+
                 // Map FileToDelete with their cached copies
                 val fileMapping = files.mapNotNull { fileToDelete ->
-                    // Copy file to cache for overwriting
-                    val cachedFile = repository.copyUriToInternalStorage(fileToDelete.uri, fileToDelete.name)
-                    if (cachedFile != null) {
-                        Pair(fileToDelete.uri, cachedFile)
-                    } else {
+                    try {
+                        errorLog.add("Processing: ${fileToDelete.name}")
+
+                        // Copy file to cache for overwriting
+                        val cachedFile = repository.copyUriToInternalStorage(fileToDelete.uri, fileToDelete.name)
+                        if (cachedFile != null && cachedFile.exists()) {
+                            errorLog.add("✓ Cached: ${fileToDelete.name} (${cachedFile.length()} bytes)")
+                            Pair(fileToDelete.uri, cachedFile)
+                        } else {
+                            errorLog.add("✗ Failed to cache: ${fileToDelete.name}")
+                            null
+                        }
+                    } catch (e: Exception) {
+                        errorLog.add("✗ Error caching ${fileToDelete.name}: ${e.message}")
                         null
                     }
                 }
 
                 if (fileMapping.isEmpty()) {
-                    _uiState.value = SecureDeletionUiState.Error("Unable to access selected files")
+                    val errorMessage = "Unable to access selected files.\n\nDebug log:\n${errorLog.joinToString("\n")}"
+                    _uiState.value = SecureDeletionUiState.Error(errorMessage)
                     return@launch
                 }
 
                 val cachedFiles = fileMapping.map { it.second }
+                errorLog.add("\nStarting secure overwrite of ${cachedFiles.size} files...")
 
                 // Securely overwrite the cached copies
-                secureDeleteFilesUseCase(cachedFiles, _selectedMethod.value)
-                    .collect { progress ->
-                        _uiState.value = SecureDeletionUiState.Deleting(progress)
-                    }
+                try {
+                    secureDeleteFilesUseCase(cachedFiles, _selectedMethod.value)
+                        .collect { progress ->
+                            _uiState.value = SecureDeletionUiState.Deleting(progress)
+                        }
+                    errorLog.add("✓ Secure overwrite complete")
+                } catch (e: Exception) {
+                    errorLog.add("✗ Overwrite error: ${e.message}")
+                    throw e
+                }
 
                 // Now delete the original files via ContentResolver
+                errorLog.add("\nDeleting original files...")
                 var deletedCount = 0
+                var failedDeletions = mutableListOf<String>()
+
                 fileMapping.forEach { (uri, cachedFile) ->
-                    if (repository.deleteOriginalFile(uri)) {
-                        deletedCount++
+                    try {
+                        val deleted = repository.deleteOriginalFile(uri)
+                        if (deleted) {
+                            deletedCount++
+                            errorLog.add("✓ Deleted original: $uri")
+                        } else {
+                            errorLog.add("✗ Failed to delete: $uri")
+                            failedDeletions.add(uri.toString())
+                        }
+                    } catch (e: Exception) {
+                        errorLog.add("✗ Exception deleting $uri: ${e.message}")
+                        failedDeletions.add("$uri (${e.message})")
                     }
+
                     // Clean up cache file if it still exists
-                    if (cachedFile.exists()) {
-                        cachedFile.delete()
+                    try {
+                        if (cachedFile.exists()) {
+                            val cacheDeleted = cachedFile.delete()
+                            errorLog.add("Cache cleanup: $cacheDeleted")
+                        }
+                    } catch (e: Exception) {
+                        errorLog.add("Cache cleanup error: ${e.message}")
                     }
+                }
+
+                errorLog.add("\nResult: $deletedCount of ${fileMapping.size} files deleted")
+
+                // If no files were deleted, show error
+                if (deletedCount == 0) {
+                    val errorMessage = "Failed to delete files.\n\nDebug log:\n${errorLog.joinToString("\n")}\n\nFailed URIs:\n${failedDeletions.joinToString("\n")}"
+                    _uiState.value = SecureDeletionUiState.Error(errorMessage)
+                    return@launch
                 }
 
                 // Deletion complete
@@ -119,7 +166,7 @@ class SecureDeletionViewModel(
                 _selectedFiles.value = emptyList()
 
             } catch (e: Exception) {
-                _uiState.value = SecureDeletionUiState.Error(e.message ?: "Unknown error occurred")
+                _uiState.value = SecureDeletionUiState.Error("Error: ${e.javaClass.simpleName}\n${e.message}\n\nStack trace:\n${e.stackTraceToString().take(500)}")
             }
         }
     }
